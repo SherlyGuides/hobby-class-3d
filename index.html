@@ -75,14 +75,13 @@
     <div class="eyebrow">Projector</div>
     <div class="row">
       <button type="button" id="vplay">Play video</button>
-      <button type="button" id="vmute">Unmute</button>
       <button type="button" data-v="screen">Look at screen</button>
     </div>
   </div>
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4" loop muted playsinline preload="metadata" hidden></video>
+<video id="vid" src="screen.mp4" loop muted playsinline preload="auto" hidden></video>
 <script src="model.js"></script>
 <script type="importmap">
 { "imports": {
@@ -131,10 +130,9 @@ const vid = document.getElementById('vid');
 const vtex = new THREE.VideoTexture(vid); vtex.colorSpace = THREE.SRGBColorSpace;
 const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.06, 1.156), new THREE.MeshBasicMaterial({ map: vtex, toneMapped: false }));
 screenMesh.position.set(6.80, 1.906, -10.40); scene.add(screenMesh);
-const vplay = document.getElementById('vplay'), vmute = document.getElementById('vmute');
-function syncVideoUI() { vplay.textContent = vid.paused ? 'Play video' : 'Pause video'; vmute.textContent = vid.muted ? 'Unmute' : 'Mute'; }
+const vplay = document.getElementById('vplay');
+function syncVideoUI() { vplay.textContent = vid.paused ? 'Play video' : 'Pause video'; }
 vplay.onclick = () => { (vid.paused ? vid.play() : Promise.resolve(vid.pause())).catch(() => {}).finally(syncVideoUI); };
-vmute.onclick = () => { vid.muted = !vid.muted; if (vid.paused) vid.play().catch(() => {}); syncVideoUI(); };
 vid.addEventListener('play', syncVideoUI); vid.addEventListener('pause', syncVideoUI);
 
 const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vector3();
