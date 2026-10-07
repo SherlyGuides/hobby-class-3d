@@ -72,10 +72,17 @@
     <label><input type="checkbox" id="spin"> Auto-rotate</label>
     <label><input type="checkbox" id="wire"> Wireframe</label>
     <label>X-ray <input type="range" id="xray" min="0.15" max="1" step="0.05" value="1"></label>
+    <div class="eyebrow">Projector</div>
+    <div class="row">
+      <button type="button" id="vplay">Play video</button>
+      <button type="button" id="vmute">Unmute</button>
+      <button type="button" data-v="screen">Look at screen</button>
+    </div>
   </div>
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
+<video id="vid" src="screen.mp4" loop muted playsinline preload="metadata" hidden></video>
 <script src="model.js"></script>
 <script type="importmap">
 { "imports": {
@@ -120,6 +127,16 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.4);
 sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005;
 scene.add(sun);
 
+const vid = document.getElementById('vid');
+const vtex = new THREE.VideoTexture(vid); vtex.colorSpace = THREE.SRGBColorSpace;
+const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.06, 1.156), new THREE.MeshBasicMaterial({ map: vtex, toneMapped: false }));
+screenMesh.position.set(6.80, 1.906, -10.40); scene.add(screenMesh);
+const vplay = document.getElementById('vplay'), vmute = document.getElementById('vmute');
+function syncVideoUI() { vplay.textContent = vid.paused ? 'Play video' : 'Pause video'; vmute.textContent = vid.muted ? 'Unmute' : 'Mute'; }
+vplay.onclick = () => { (vid.paused ? vid.play() : Promise.resolve(vid.pause())).catch(() => {}).finally(syncVideoUI); };
+vmute.onclick = () => { vid.muted = !vid.muted; if (vid.paused) vid.play().catch(() => {}); syncVideoUI(); };
+vid.addEventListener('play', syncVideoUI); vid.addEventListener('pause', syncVideoUI);
+
 const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vector3();
 let radius = 10;
 const materials = new Set();
@@ -153,11 +170,13 @@ new GLTFLoader().load(MODEL, (gltf) => {
   controls.minDistance = radius * 0.05; controls.maxDistance = radius * 6;
   document.getElementById('load').remove();
   setView('iso');
+  vid.play().catch(() => {}); syncVideoUI();
 }, (ev) => {
   if (ev.total) document.getElementById('load').textContent = `Loading model… ${Math.round(ev.loaded / ev.total * 100)}%`;
 }, (e) => { document.getElementById('load').textContent = 'The model could not be loaded. Reload the page to try again.'; console.error(e); });
 
 function setView(v) {
+  if (v === 'screen') { camera.position.set(6.8, 1.7, -6.2); controls.target.set(6.8, 1.9, -10.4); controls.update(); return; }
   const d = radius * 1.15;
   const off = {
     iso:   new THREE.Vector3(-d * 0.8, d * 0.75, d * 0.9),
