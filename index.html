@@ -78,6 +78,11 @@
     <div class="eyebrow">Display</div>
     <label><input type="checkbox" id="wire"> Wireframe</label>
     <label>X-ray <input type="range" id="xray" min="0.15" max="1" step="0.05" value="1"></label>
+    <div class="eyebrow">Zing robot</div>
+    <div class="row">
+      <button type="button" id="danceBtn" class="on">Dance</button>
+      <button type="button" data-v="zing">Look at Zing</button>
+    </div>
     <div class="eyebrow">Projector</div>
     <div class="row">
       <button type="button" id="vplay">Play video</button>
@@ -87,8 +92,8 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791380612" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791383481"></script>
+<video id="vid" src="screen.mp4?v=1791384082" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791384082"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -145,7 +150,7 @@ const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vec
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791380774').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791384082').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
@@ -181,6 +186,18 @@ function stepTweens(now) {
 document.getElementById('seatLecture').onclick = () => setSeating('lecture');
 document.getElementById('seatActivity').onclick = () => setSeating('activity');
 let modelRoot = null;
+
+// ---- Zing dance: the GLB carries a baked 'Dance' clip on the robot's armature ----
+let mixer = null, danceAction = null, dancing = true; const clock = new THREE.Clock();
+function bindZing(gltf) {
+  const clip = (gltf.animations || []).find(a => /dance/i.test(a.name)) || (gltf.animations || [])[0];
+  if (!clip) { document.getElementById('danceBtn').disabled = true; return; }
+  mixer = new THREE.AnimationMixer(gltf.scene);
+  danceAction = mixer.clipAction(clip); danceAction.setLoop(THREE.LoopRepeat, Infinity); danceAction.play();
+  gltf.scene.traverse(o => { if (o.isSkinnedMesh) o.frustumCulled = false; });
+}
+function danceStep() { if (mixer) mixer.update(clock.getDelta()); }
+document.getElementById('danceBtn').onclick = () => { dancing = !dancing; if (danceAction) danceAction.paused = !dancing; document.getElementById('danceBtn').classList.toggle('on', dancing); };
 let radius = 10;
 const materials = new Set();
 
@@ -192,7 +209,7 @@ new GLTFLoader().load(MODEL, (gltf) => {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     mats.forEach((m) => { if (!m) return; materials.add(m); m.side = THREE.DoubleSide; if (m.transparent) o.castShadow = false; });
   });
-  scene.add(root); modelRoot = root; bindChairs();
+  scene.add(root); modelRoot = root; bindChairs(); bindZing(gltf);
 
   box.setFromObject(root); box.getCenter(center); box.getSize(size);
   radius = Math.max(size.x, size.y, size.z);
@@ -220,6 +237,7 @@ new GLTFLoader().load(MODEL, (gltf) => {
 
 function setView(v) {
   if (v === 'screen') { camera.position.set(6.8, 1.7, -6.2); controls.target.set(6.8, 1.9, -10.4); controls.update(); return; }
+  if (v === 'zing') { camera.position.set(5.6, 1.5, -5.9); controls.target.set(6.4, 1.15, -7.3); controls.update(); return; }
   const d = radius * 1.15;
   const off = {
     iso:   new THREE.Vector3(-d * 0.8, d * 0.75, d * 0.9),
@@ -251,7 +269,7 @@ function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight, pr = renderer.getPixelRatio();
   if (canvas.width !== Math.floor(w * pr) || canvas.height !== Math.floor(h * pr)) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 }
-renderer.setAnimationLoop((now) => { resize(); stepTweens(now); controls.update(); renderer.render(scene, camera); });
+renderer.setAnimationLoop((now) => { resize(); stepTweens(now); danceStep(); controls.update(); renderer.render(scene, camera); });
 </script>
 
 </html>
