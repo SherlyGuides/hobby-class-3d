@@ -87,8 +87,8 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791380443" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791380443"></script>
+<video id="vid" src="screen.mp4?v=1791380533" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791380533"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -145,7 +145,7 @@ const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vec
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791380443').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791380533').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
@@ -230,7 +230,7 @@ function setView(v) {
   camera.position.copy(center).add(off);
   controls.target.copy(center); controls.update();
 }
-document.querySelectorAll('.row button').forEach(b => b.onclick = () => setView(b.dataset.v));
+document.querySelectorAll('.row button[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
 document.getElementById('spin').onchange = e => controls.autoRotate = e.target.checked;
 document.getElementById('wire').onchange = e => materials.forEach(m => m.wireframe = e.target.checked);
 document.getElementById('xray').oninput = e => {
