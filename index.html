@@ -42,7 +42,7 @@
   .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .row button { border: 1px solid var(--line); background: var(--btn); color: var(--fg); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .row button:hover { background: var(--btn-hover); }
-  .row.seat button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .row button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .eyebrow { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); margin-top: 6px; }
   #help { position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 16px; background: var(--card); border: 1px solid var(--line);
           border-radius: 8px; padding: 7px 11px; font-size: 12px; color: var(--mut); }
@@ -73,9 +73,9 @@
       <button type="button" data-v="top">Plan</button>
       <button type="button" data-v="front">Front</button>
       <button type="button" data-v="side">Side</button>
+      <button type="button" id="spinBtn">Auto-rotate</button>
     </div>
     <div class="eyebrow">Display</div>
-    <label><input type="checkbox" id="spin"> Auto-rotate</label>
     <label><input type="checkbox" id="wire"> Wireframe</label>
     <label>X-ray <input type="range" id="xray" min="0.15" max="1" step="0.05" value="1"></label>
     <div class="eyebrow">Projector</div>
@@ -87,8 +87,8 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791380533" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791380533"></script>
+<video id="vid" src="screen.mp4?v=1791380612" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791380612"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -145,7 +145,7 @@ const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vec
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791380533').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791380612').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
@@ -231,7 +231,9 @@ function setView(v) {
   controls.target.copy(center); controls.update();
 }
 document.querySelectorAll('.row button[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
-document.getElementById('spin').onchange = e => controls.autoRotate = e.target.checked;
+const spinBtn = document.getElementById('spinBtn');
+spinBtn.onclick = () => { controls.autoRotate = !controls.autoRotate; spinBtn.classList.toggle('on', controls.autoRotate); spinBtn.setAttribute('aria-pressed', String(controls.autoRotate)); };
+spinBtn.setAttribute('aria-pressed', 'false');
 document.getElementById('wire').onchange = e => materials.forEach(m => m.wireframe = e.target.checked);
 document.getElementById('xray').oninput = e => {
   const v = parseFloat(e.target.value);
