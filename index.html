@@ -42,6 +42,7 @@
   .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .row button { border: 1px solid var(--line); background: var(--btn); color: var(--fg); border-radius: 6px; padding: 5px 9px; font-size: 12px; cursor: pointer; font-family: inherit; }
   .row button:hover { background: var(--btn-hover); }
+  .row.seat button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .eyebrow { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); margin-top: 6px; }
   #help { position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 16px; background: var(--card); border: 1px solid var(--line);
           border-radius: 8px; padding: 7px 11px; font-size: 12px; color: var(--mut); }
@@ -61,6 +62,11 @@
     <button id="fold" type="button" aria-label="Collapse controls" aria-expanded="true">▾</button>
   </header>
   <div id="body">
+    <div class="eyebrow">Seating</div>
+    <div class="row seat">
+      <button type="button" id="seatLecture" class="on">Lecture</button>
+      <button type="button" id="seatActivity">Activity time</button>
+    </div>
     <div class="eyebrow">View</div>
     <div class="row">
       <button type="button" data-v="iso">Isometric</button>
@@ -81,8 +87,8 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791380197" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791380197"></script>
+<video id="vid" src="screen.mp4?v=1791380443" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791380443"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -136,6 +142,45 @@ vplay.onclick = () => { (vid.paused ? vid.play() : Promise.resolve(vid.pause()))
 vid.addEventListener('play', syncVideoUI); vid.addEventListener('pause', syncVideoUI);
 
 const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vector3();
+
+// ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
+let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
+fetch('arrangements.json?v=1791380443').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+function bindChairs() {
+  if (!layouts || !modelRoot) return;
+  chairNodes = [];
+  for (const name in layouts) { const o = modelRoot.getObjectByName(name); if (o) chairNodes.push({ o, l: layouts[name] }); }
+  let saved = 'lecture'; try { saved = localStorage.getItem('hc3d-seating') || 'lecture'; } catch {}
+  setSeating(saved, false);
+}
+function matTo(arr, pos, quat, scl) { new THREE.Matrix4().fromArray(arr).decompose(pos, quat, scl); }
+function setSeating(mode, animate = true) {
+  if (!chairNodes.length) return;
+  seating = mode; tweens = [];
+  document.getElementById('seatLecture').classList.toggle('on', mode === 'lecture');
+  document.getElementById('seatActivity').classList.toggle('on', mode === 'activity');
+  try { localStorage.setItem('hc3d-seating', mode); } catch {}
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (const { o, l } of chairNodes) {
+    const p1 = new THREE.Vector3(), q1 = new THREE.Quaternion(), s1 = new THREE.Vector3();
+    matTo(l[mode], p1, q1, s1);
+    if (!animate || reduce) { o.position.copy(p1); o.quaternion.copy(q1); o.scale.copy(s1); continue; }
+    tweens.push({ o, p0: o.position.clone(), q0: o.quaternion.clone(), p1, q1, s1, t0: performance.now() });
+  }
+}
+function stepTweens(now) {
+  if (!tweens.length) return;
+  const D = 900;
+  tweens = tweens.filter(({ o, p0, q0, p1, q1, s1, t0 }) => {
+    let k = Math.min(1, (now - t0) / D); const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    o.position.lerpVectors(p0, p1, e); o.quaternion.slerpQuaternions(q0, q1, e); o.scale.copy(s1);
+    o.position.y += Math.sin(e * Math.PI) * 0.06;   // small lift while moving
+    return k < 1;
+  });
+}
+document.getElementById('seatLecture').onclick = () => setSeating('lecture');
+document.getElementById('seatActivity').onclick = () => setSeating('activity');
+let modelRoot = null;
 let radius = 10;
 const materials = new Set();
 
@@ -147,7 +192,7 @@ new GLTFLoader().load(MODEL, (gltf) => {
     const mats = Array.isArray(o.material) ? o.material : [o.material];
     mats.forEach((m) => { if (!m) return; materials.add(m); m.side = THREE.DoubleSide; if (m.transparent) o.castShadow = false; });
   });
-  scene.add(root);
+  scene.add(root); modelRoot = root; bindChairs();
 
   box.setFromObject(root); box.getCenter(center); box.getSize(size);
   radius = Math.max(size.x, size.y, size.z);
@@ -204,7 +249,7 @@ function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight, pr = renderer.getPixelRatio();
   if (canvas.width !== Math.floor(w * pr) || canvas.height !== Math.floor(h * pr)) { renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 }
-renderer.setAnimationLoop(() => { resize(); controls.update(); renderer.render(scene, camera); });
+renderer.setAnimationLoop((now) => { resize(); stepTweens(now); controls.update(); renderer.render(scene, camera); });
 </script>
 
 </html>
