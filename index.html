@@ -92,8 +92,8 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791435932" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791435932"></script>
+<video id="vid" src="screen.mp4?v=1791436057" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791436057"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -150,7 +150,7 @@ const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vec
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791435932').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791436057').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
