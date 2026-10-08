@@ -46,6 +46,14 @@
   .eyebrow { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mut); margin-top: 6px; }
   #help { position: absolute; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 16px; background: var(--card); border: 1px solid var(--line);
           border-radius: 8px; padding: 7px 11px; font-size: 12px; color: var(--mut); }
+  #fpModal { position: absolute; inset: 0; background: rgba(10,12,16,0.86); display: flex; flex-direction: column; z-index: 20; }
+  #fpModal[hidden] { display: none; }
+  .fpBar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px; color: #fff; font-size: 14px; flex-wrap: wrap; }
+  .fpBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fpBtns a, .fpBtns button { border: 1px solid #8a94a0; background: #1d2228; color: #fff; border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 13px; text-decoration: none; cursor: pointer; }
+  .fpBtns a:hover, .fpBtns button:hover { background: #2b323a; }
+  .fpBody { flex: 1; overflow: auto; padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .fpBody img { display: block; max-width: 100%; margin: 0 auto; background: #fff; border-radius: 4px; }
   #load { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--mut); pointer-events: none; }
   @media (max-width: 600px) { #help { display: none; } }
   @media (prefers-reduced-motion: reduce) { #ui { backdrop-filter: none; } }
@@ -74,6 +82,7 @@
       <button type="button" data-v="front">Front</button>
       <button type="button" data-v="side">Side</button>
       <button type="button" id="spinBtn">Auto-rotate</button>
+      <button type="button" id="fpBtn">Floor plan</button>
     </div>
     <div class="eyebrow">Display</div>
     <label><input type="checkbox" id="wire"> Wireframe</label>
@@ -92,8 +101,12 @@
 </div>
 <div id="help">Drag to rotate · Right-drag or two fingers to pan · Scroll to zoom</div>
 
-<video id="vid" src="screen.mp4?v=1791436433" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791436433"></script>
+<div id="fpModal" hidden role="dialog" aria-label="Floor plan">
+  <div class="fpBar"><strong>Floor plan · Hobby Class, LVL 80.50</strong><span class="fpBtns"><a id="fpOpen" href="floorplan.png" target="_blank" rel="noopener">Open full size</a><a id="fpDl" href="floorplan.png" download="Hobby_Class_Floor_Plan.png">Download PNG</a><button type="button" id="fpClose">Close</button></span></div>
+  <div class="fpBody"><img id="fpImg" alt="Annotated floor plan of the Hobby Class" loading="lazy"></div>
+</div>
+<video id="vid" src="screen.mp4?v=1791436771" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791436771"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -150,7 +163,7 @@ const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vec
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791436433').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791436771').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
@@ -249,6 +262,10 @@ function setView(v) {
   controls.target.copy(center); controls.update();
 }
 document.querySelectorAll('.row button[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
+const fpModal = document.getElementById('fpModal'), fpImg = document.getElementById('fpImg');
+document.getElementById('fpBtn').onclick = () => { if (!fpImg.src) fpImg.src = 'floorplan.png'; fpModal.hidden = false; };
+document.getElementById('fpClose').onclick = () => { fpModal.hidden = true; };
+fpModal.addEventListener('keydown', e => { if (e.key === 'Escape') fpModal.hidden = true; });
 const spinBtn = document.getElementById('spinBtn');
 spinBtn.onclick = () => { controls.autoRotate = !controls.autoRotate; spinBtn.classList.toggle('on', controls.autoRotate); spinBtn.setAttribute('aria-pressed', String(controls.autoRotate)); };
 spinBtn.setAttribute('aria-pressed', 'false');
