@@ -79,23 +79,9 @@
     <div class="row">
       <button type="button" data-v="iso">Isometric</button>
       <button type="button" data-v="top">Plan</button>
-      <button type="button" data-v="front">Front</button>
-      <button type="button" data-v="side">Side</button>
       <button type="button" id="spinBtn">Auto-rotate</button>
-      <button type="button" id="fpBtn">Floor plan</button>
-    </div>
-    <div class="eyebrow">Display</div>
-    <label><input type="checkbox" id="wire"> Wireframe</label>
-    <label>X-ray <input type="range" id="xray" min="0.15" max="1" step="0.05" value="1"></label>
-    <div class="eyebrow">Zing robot</div>
-    <div class="row">
-      <button type="button" id="danceBtn" class="on">Dance</button>
       <button type="button" data-v="zing">Look at Zing</button>
-    </div>
-    <div class="eyebrow">Projector</div>
-    <div class="row">
-      <button type="button" id="vplay">Play video</button>
-      <button type="button" data-v="screen">Look at screen</button>
+      <button type="button" id="fpBtn">Floor plan</button>
     </div>
   </div>
 </div>
@@ -105,8 +91,8 @@
   <div class="fpBar"><strong>Floor plan · Hobby Class, LVL 80.50</strong><span class="fpBtns"><a id="fpOpen" href="floorplan.png" target="_blank" rel="noopener">Open full size</a><a id="fpDl" href="floorplan.png" download="Hobby_Class_Floor_Plan.png">Download PNG</a><button type="button" id="fpClose">Close</button></span></div>
   <div class="fpBody"><img id="fpImg" alt="Annotated floor plan of the Hobby Class" loading="lazy"></div>
 </div>
-<video id="vid" src="screen.mp4?v=1791436771" loop muted playsinline preload="auto" hidden></video>
-<script src="model.js?v=1791436771"></script>
+<video id="vid" src="screen.mp4?v=1791437202" loop muted playsinline preload="auto" hidden></video>
+<script src="model.js?v=1791437202"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
@@ -154,16 +140,13 @@ const vid = document.getElementById('vid');
 const vtex = new THREE.VideoTexture(vid); vtex.colorSpace = THREE.SRGBColorSpace;
 const screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.06, 1.156), new THREE.MeshBasicMaterial({ map: vtex, toneMapped: false }));
 screenMesh.position.set(6.80, 1.906, -10.40); scene.add(screenMesh);
-const vplay = document.getElementById('vplay');
-function syncVideoUI() { vplay.textContent = vid.paused ? 'Play video' : 'Pause video'; }
-vplay.onclick = () => { (vid.paused ? vid.play() : Promise.resolve(vid.pause())).catch(() => {}).finally(syncVideoUI); };
-vid.addEventListener('play', syncVideoUI); vid.addEventListener('pause', syncVideoUI);
+function syncVideoUI() {}
 
 const box = new THREE.Box3(), center = new THREE.Vector3(), size = new THREE.Vector3();
 
 // ---- seating layouts: 'lecture' (rows facing the teacher) and 'activity' (one chair per table side) ----
 let layouts = null, chairNodes = [], seating = 'lecture', tweens = [];
-fetch('arrangements.json?v=1791436771').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
+fetch('arrangements.json?v=1791437202').then(r => r.json()).then(d => { layouts = d; bindChairs(); }).catch(() => {});
 function bindChairs() {
   if (!layouts || !modelRoot) return;
   chairNodes = [];
@@ -204,13 +187,12 @@ let modelRoot = null;
 let mixer = null, danceAction = null, dancing = true; const clock = new THREE.Clock();
 function bindZing(gltf) {
   const clip = (gltf.animations || []).find(a => /dance/i.test(a.name)) || (gltf.animations || [])[0];
-  if (!clip) { document.getElementById('danceBtn').disabled = true; return; }
+  if (!clip) return;
   mixer = new THREE.AnimationMixer(gltf.scene);
   danceAction = mixer.clipAction(clip); danceAction.setLoop(THREE.LoopRepeat, Infinity); danceAction.play();
   gltf.scene.traverse(o => { if (o.isSkinnedMesh) o.frustumCulled = false; });
 }
 function danceStep() { if (mixer) mixer.update(clock.getDelta()); }
-document.getElementById('danceBtn').onclick = () => { dancing = !dancing; if (danceAction) danceAction.paused = !dancing; document.getElementById('danceBtn').classList.toggle('on', dancing); };
 let radius = 10;
 const materials = new Set();
 
@@ -263,18 +245,13 @@ function setView(v) {
 }
 document.querySelectorAll('.row button[data-v]').forEach(b => b.onclick = () => setView(b.dataset.v));
 const fpModal = document.getElementById('fpModal'), fpImg = document.getElementById('fpImg');
-document.getElementById('fpBtn').onclick = () => { if (!fpImg.src) fpImg.src = 'floorplan.png'; fpModal.hidden = false; };
+document.getElementById('fpBtn').onclick = () => { if (!fpImg.src) fpImg.src = 'floorplan.png?v=1791437202'; fpModal.hidden = false; };
 document.getElementById('fpClose').onclick = () => { fpModal.hidden = true; };
 fpModal.addEventListener('keydown', e => { if (e.key === 'Escape') fpModal.hidden = true; });
 const spinBtn = document.getElementById('spinBtn');
 spinBtn.onclick = () => { controls.autoRotate = !controls.autoRotate; spinBtn.classList.toggle('on', controls.autoRotate); spinBtn.setAttribute('aria-pressed', String(controls.autoRotate)); };
 spinBtn.setAttribute('aria-pressed', 'false');
-document.getElementById('wire').onchange = e => materials.forEach(m => m.wireframe = e.target.checked);
-document.getElementById('xray').oninput = e => {
-  const v = parseFloat(e.target.value);
-  materials.forEach(m => { m.userData.baseOpacity ??= m.opacity; m.userData.baseT ??= m.transparent;
-    m.transparent = v < 1 || m.userData.baseT; m.opacity = v < 1 ? Math.min(v, m.userData.baseOpacity) : m.userData.baseOpacity; m.depthWrite = v >= 1; m.needsUpdate = true; });
-};
+
 const fold = document.getElementById('fold'), body = document.getElementById('body');
 function setFold(open) { body.hidden = !open; fold.textContent = open ? '▾' : '▸'; fold.setAttribute('aria-expanded', String(open)); fold.setAttribute('aria-label', open ? 'Collapse controls' : 'Expand controls'); try { localStorage.setItem('hc3d-fold', open ? '1' : '0'); } catch {} }
 document.getElementById('hdr').onclick = () => setFold(body.hidden);
